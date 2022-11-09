@@ -34,7 +34,9 @@ class ParamManager():
                 layer = find_layer(model, layer_name)
                 print(layer)
         '''
-        layer_name = layer_name.split('.')
+        if isinstance(layer_name, str):
+            layer_name = layer_name.split('.')
+
         if len(layer_name) != 0:
             for name, child in model.named_children():
                 if name == layer_name[0]:
@@ -55,6 +57,15 @@ class ParamManager():
                 param.requires_grad = False
             self.freeze_all_params(child)
 
+    def melt_all_params(self, model):
+        '''
+        Example: melt_all_params(model)
+        '''
+        for name, child in model.named_children():
+            for param in child.parameters():
+                param.requires_grad = True
+            self.melt_all_params(child)
+
     def freeze_params(self, model, layer_to_freeze_list):
         '''
         Output:
@@ -74,4 +85,22 @@ class ParamManager():
         return True if len(layer_to_freeze_list) == len(freezed_layer_list) \
             else freezed_layer_list
 
+    def freeze_params_except(self, model, layer_not_to_freeze_list):
+        '''
+        Output:
+            melted_layer_list = True if all layer in layer_not_to_freeze_list are melted and others are freezed.
+                                (list) else the list of melted layers.
+        Example:
+            layer_not_to_freeze_list = ['rpn.rpn_cls_layer', 'rpn.rpn_reg_layer', 'rcnn_net.cls_layer', 'rcnn_net.reg_layer']
+            print(freeze_params_except(model, layer_not_to_freeze_list))
+        '''
+        self.freeze_all_params(model)
 
+        melted_layer_list = []
+        for layer_to_melt in layer_not_to_freeze_list:
+            layer = self.find_layer(model, layer_to_melt)
+            if layer != False:
+                self.melt_all_params(layer)
+                melted_layer_list.append(layer_to_melt)
+
+        return True if len(layer_not_to_freeze_list) == len(melted_layer_list) else melted_layer_list

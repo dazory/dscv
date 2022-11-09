@@ -4,14 +4,6 @@ import shutil
 import numpy as np
 
 
-CORRUPTIONS = [
-  'gaussian_noise', 'shot_noise', 'impulse_noise', 'defocus_blur',
-  'glass_blur', 'motion_blur', 'zoom_blur', 'snow', 'frost', 'fog',
-  'brightness', 'contrast', 'elastic_transform', 'pixelate',
-  'jpeg_compression'
-]
-
-
 def accuracy(output, target, topk=(1,)):
     """Computes the accuracy over the k top predictions for the specified values of k."""
     with torch.no_grad():
@@ -39,5 +31,3 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
     if is_best:
         shutil.copyfile(filename, 'model_best.pth.tar')
-
-

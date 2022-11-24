@@ -4,6 +4,8 @@ class ParamManager():
     def __init__(self):
         super(ParamManager, self).__init__()
 
+        self.hook_results = dict(module=dict(), input=dict(), output=dict())
+
     # Debuging tools
     def check_param_structure(self, model, blank=''):
         '''
@@ -104,3 +106,27 @@ class ParamManager():
                 melted_layer_list.append(layer_to_melt)
 
         return True if len(layer_not_to_freeze_list) == len(melted_layer_list) else melted_layer_list
+
+    # Hook
+    def register_forward_hook(self, model, layer_name_list, type='output', detach=False):
+        def save_output(layer_name, type):
+            if not type in self.hook_results.keys():
+                raise TypeError(f"Only supported for 'module', 'input', and 'output as a type,"
+                                f"but got {type}")
+            def hook_fn(m, i, o):
+                if type == 'module':
+                    _data = m
+                elif type == 'input':
+                    _data = i
+                elif type == 'output':
+                    _data = o
+                else:
+                    raise TypeError('')
+                if detach:
+                    _data = _data.detach()
+                self.hook_results[type].update({layer_name: _data})
+            return hook_fn
+
+        for layer_name in layer_name_list:
+            layer = self.find_layer(model, layer_name)
+            layer.register_forward_hook(save_output(layer_name, type))

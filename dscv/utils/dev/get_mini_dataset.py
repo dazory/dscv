@@ -7,11 +7,12 @@ from dscv.utils.utils import get_dir_and_file_name
 
 
 class MiniCOCODataset:
-    def __init__(self, data_root, ann_file, save_root):
+    def __init__(self, data_root, ann_file, save_root, img_prefix):
         self.data_root = data_root
         self.save_root = save_root
-        self.ann_file = f"{data_root}/{ann_file}"
-        with open(self.ann_file, 'r') as file:
+        self.img_prefix = img_prefix
+        self.ann_file = ann_file
+        with open(f"{data_root}/{ann_file}", 'r') as file:
             self.data = json.load(file)
 
     def get_mini_dataset(self, num_images=10):
@@ -61,13 +62,16 @@ class MiniCOCODataset:
         os.makedirs(dir_name, exist_ok=True)
         with open(file_path, 'w') as file:
             json.dump(data, file)
+            print(f"save json file: {file_path}")
         return True
 
     def save_images(self, data):
         for image in data['images']:
-            file_path = f"{self.save_root}/{image['file_name']}"
-            os.makedirs(file_path, exist_ok=True)
-            os.system(f"cp {self.data_root}/{image['file_name']} {file_path}")
+            save_path = f"{self.save_root}/{self.img_prefix}"
+            os.makedirs(save_path, exist_ok=True)
+            os.system(f"cp {self.data_root}/{self.img_prefix}/{image['file_name']} {save_path}/{image['file_name']}")
+            # print(f"{self.data_root}/{self.img_prefix}/{image['file_name']} --> {save_path}/{image['file_name']}")
+        print(f"save images: {save_path}")
         return True
 
 
@@ -93,7 +97,7 @@ def main():
 
     args = parser.parse_args()
 
-    mini_dataset = MiniCOCODataset(args.data_root, args.ann_file, args.save_root)
+    mini_dataset = MiniCOCODataset(args.data_root, args.ann_file, args.save_root, args.img_prefix)
     mini_data = mini_dataset.get_mini_dataset(num_images=args.num_images)
     mini_dataset.save_json(mini_data)
     mini_dataset.save_images(mini_data)

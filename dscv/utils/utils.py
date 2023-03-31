@@ -4,6 +4,25 @@ import shutil
 import numpy as np
 
 
+def get_dir_and_file_name(full_path):
+    '''
+    Examples:
+        '/ws/data', None = get_dir_and_file_name('/ws/data')
+        '/ws/data', 'img.png' = get_dir_and_file_name('/ws/data/img.png')
+        'data', None = get_dir_and_file_name('data')
+        None, 'img.png' = get_dir_and_file_name('img.png')
+    '''
+    name_dir = full_path.split('/')
+    name_file = full_path.split('.')
+
+    file = name_dir[-1] if len(name_file) > 1 else None
+    dir = full_path if file is None else '/'.join(name_dir[:-1])
+    if len(name_dir) == 1 and (not file is None):
+        dir = None
+
+    return dir, file
+
+
 def accuracy(output, target, topk=(1,)):
     """Computes the accuracy over the k top predictions for the specified values of k."""
     with torch.no_grad():

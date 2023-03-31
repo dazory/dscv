@@ -85,8 +85,7 @@ class CocoDataset(Dataset):
             image: (PIL)
         '''
         img_info = self.data_infos[idx]
-        file_path = os.path.join(self.root_dir, self.split,
-                                 img_info['filename'])
+        file_path = os.path.join(self.root_dir, img_info['filename'])
 
         image = Image.open(file_path).convert('RGB')
 
@@ -148,7 +147,21 @@ class CityscapesDataset(CocoDataset):
         self.num_classes = len(self.CLASSES)
         self.COLOR_ARRAY = cm.rainbow(np.linspace(0, 1, len(self.CLASSES)))
 
+    def load_image(self, idx):
+        '''
+        Output:
+            image: (PIL)
+        '''
+        img_info = self.data_infos[idx]
+        file_path = os.path.join(self.root_dir, self.split,
+                                 img_info['filename'])
 
+        image = Image.open(file_path).convert('RGB')
+
+        for transform in self.transforms:
+            image = transform(image)
+
+        return image
 
     def __getitem__(self, idx):
         data = dict()

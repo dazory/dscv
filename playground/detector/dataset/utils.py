@@ -1,10 +1,15 @@
-from .cityscapes import CityscapesDataset
+from .cityscapes import CityscapesDataset, CocoDataset
 
 
 def build_dataset(config):
-    dataset = CityscapesDataset(config.root_dir,
-                                config.ann_file,
-                                config.transforms, split='train')
+    if config.train.type == 'cityscapes':
+        dataset = CityscapesDataset(config.root_dir,
+                                    config.ann_file,
+                                    config.transforms, split='train')
+    elif config.train.type == 'CocoDataset':
+        dataset = CocoDataset(config.train.img_prefix,
+                              config.train.ann_file,
+                              config.train.pipeline, split='train')
     return dataset
 
 

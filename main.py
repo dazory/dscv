@@ -20,6 +20,9 @@ cfg.load(args.cfg)
 if args.debug:
     cfg.data.num_workers = 0
     cfg.data.batch_size = 3
+    if cfg.runner.get('logger'):
+        if cfg.runner.logger.type == 'wandb_logger':
+            cfg.runner.logger.use_wandb=False
 
 # GUIDE: Build dataset
 train_dataset = build_dataset(cfg.data.train)

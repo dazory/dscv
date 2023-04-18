@@ -20,11 +20,25 @@ class Config(dict):
     def __setattr__(self, key, value):
         self[key] = value
 
-    def copy(self):
-        data = dict()
+    def copy(self, del_type=False):
+        # data = Config()
+        # for k, v in self.items():
+        #     if isinstance(v, Config):
+        #         data[k] = v.copy()
+        #     else:
+        #         data[k] = v
+        # if del_type:
+        #     data.pop('type')
+        # data = copy.deepcopy(data)
+        data = Config()
         for k, v in self.items():
-            data[k] = v
-        return copy.deepcopy(data)
+            if isinstance(v, Config):
+                data[k] = v.copy()
+            else:
+                data[k] = copy.deepcopy(v)
+        if del_type:
+            data.pop('type')
+        return data
 
     def _update(self, d, u):
         for k, v in u.items():

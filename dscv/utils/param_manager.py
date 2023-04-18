@@ -1,3 +1,4 @@
+import torchsummary
 
 
 class ParamManager():
@@ -25,6 +26,14 @@ class ParamManager():
                 print(f"{param.requires_grad} ", end='')
             print('')
             self.check_grad_status(child, blank + '  ├ ')
+
+    def summary(self, model, data_shape=None, device='cpu'):
+        '''
+        Example: check_grad_status(model)
+        '''
+        if data_shape is None:
+            data_shape = (3, 224, 224)
+        return torchsummary.summary(model, **data_shape, device=device)
 
     # Helper
     def find_layer(self, model, layer_name):

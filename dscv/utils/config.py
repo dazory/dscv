@@ -21,15 +21,6 @@ class Config(dict):
         self[key] = value
 
     def copy(self, del_type=False):
-        # data = Config()
-        # for k, v in self.items():
-        #     if isinstance(v, Config):
-        #         data[k] = v.copy()
-        #     else:
-        #         data[k] = v
-        # if del_type:
-        #     data.pop('type')
-        # data = copy.deepcopy(data)
         data = Config()
         for k, v in self.items():
             if isinstance(v, Config):
@@ -43,7 +34,6 @@ class Config(dict):
     def _update(self, d, u):
         for k, v in u.items():
             if isinstance(v, collections.abc.Mapping):
-                # d[k] = self._update(d.get(k, {}), v)
                 d[k] = self._update(d.get(k, {}), v)
             else:
                 if not d.get(k):

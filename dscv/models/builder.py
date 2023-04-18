@@ -2,7 +2,11 @@ import warnings
 
 import torch.nn
 import torch.backends.cudnn as cudnn
-from torchvision import models
+
+from dscv.utils import Registry, build_from_cfg
+
+
+MODELS = Registry('models')
 
 
 def build_model(cfg, train_cfg=None, test_cfg=None):
@@ -14,13 +18,14 @@ def build_model(cfg, train_cfg=None, test_cfg=None):
         'train_cfg specified in both outer field and model field '
     assert cfg.get('test_cfg') is None or test_cfg is None, \
         'test_cfg specified in both outer field and model field '
-    if cfg.type in models.__dict__:
-        model = models.__dict__[cfg.type](pretrained=cfg.get('pre_trained'))
-        model.train_cfg = train_cfg
-        model.test_cfg = test_cfg
-    else:
-        raise TypeError('')
 
+    if isinstance(cfg, dict):
+        model = build_from_cfg(cfg, MODELS)
+    else:
+        raise TypeError('cfg must be a dict, but got {}'.format(type(cfg)))
+
+    model.train_cfg = train_cfg
+    model.test_cfg = test_cfg
     model = torch.nn.DataParallel(model).cuda()
     cudnn.benchmark = True
 

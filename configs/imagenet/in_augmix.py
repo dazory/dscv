@@ -1,8 +1,8 @@
 _base_ = [
-    '../_base_/datasets/imagenet100.py',
+    '../_base_/datasets/imagenet.py',
 ]
 
-name = 'in100_augmix'
+name = 'in_augmix'
 num_inputs = 3
 
 # data
@@ -27,7 +27,6 @@ data = dict(
 model = dict(
     type='AugMixNet',
     model=dict(type='resnet50', pretrained=True),
-    num_inputs=num_inputs,
     loss=[
         dict(type='CrossEntropyLoss',
              name='orig_loss', weight=1.0

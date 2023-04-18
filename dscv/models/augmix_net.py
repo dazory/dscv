@@ -1,17 +1,20 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import models
 
-from dscv.models.builder import MODELS
 from dscv.losses.builder import build_loss
+from dscv.models.builder import MODELS
 
 
 @MODELS.register_module
-class BaseNet(nn.Module):
-    def __init__(self, model, loss):
-        super(BaseNet, self).__init__()
-        self.model = model
+class AugMixNet(nn.Module):
+    def __init__(self, model, loss, num_inputs=3):
+        super(AugMixNet, self).__init__()
+        self.model = self._build_model(model)
         self.criterions = build_loss(loss)
+
+        self.num_inputs = num_inputs
 
     def forward(self, images, labels, mode='train', **kwargs):
         if mode == 'train':
@@ -26,6 +29,8 @@ class BaseNet(nn.Module):
         outputs = dict()
 
         # forward
+        if isinstance(images, tuple) or isinstance(images, list):
+            images = torch.cat(images, dim=0)
         logits = self.model(images)
 
         # compute loss
@@ -49,7 +54,15 @@ class BaseNet(nn.Module):
         return outputs
 
     def loss(self, logits, labels):
+        logit_clean = torch.split(logits, logits.size(0) // self.num_inputs)[0]
+        clean_loss = self.criterions[0](logit_clean, labels)
+        dg_loss = self.criterions[1](logits)
+
         losses = dict()
-        for criterion in self.criterions:
-            losses.update(criterion(logits, labels))
+        losses.update(clean_loss)
+        losses.update(dg_loss)
+
         return losses
+
+    def _build_model(self, cfg):
+        return models.__dict__[cfg.type](pretrained=cfg.get('pre_trained'))

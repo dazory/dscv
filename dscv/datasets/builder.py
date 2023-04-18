@@ -2,6 +2,7 @@ import os
 import torch
 
 import dscv.datasets
+from .pipelines.builder import build_pipeline
 
 
 def build_from_cfg(cfg, obj_cls, default_args=None):
@@ -15,12 +16,18 @@ def build_from_cfg(cfg, obj_cls, default_args=None):
 
 
 def build_dataset(cfg):
+    _cfg = cfg.copy(del_type=True)
+    _cfg.pipeline = build_pipeline(_cfg.pipeline)
     if cfg.type == 'ImageNetDataset':
-        dataset = build_from_cfg(cfg, dscv.datasets.ImageNetDataset)
-    elif cfg.type == 'CustomDataset':
-        dataset = build_from_cfg(cfg, dscv.datasets.CustomDataset)
+        dataset = dscv.datasets.ImageNetDataset(**_cfg)
     else:
         raise TypeError('')
+
+    if cfg.get('wrapper'):
+        if cfg.wrapper == 'AugMixDataset':
+            _cfg.preprocess = build_pipeline(_cfg.get('preprocess'))
+            dataset = dscv.datasets.AugMixDataset(dataset, **_cfg)
+
     return dataset
 
 

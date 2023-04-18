@@ -2,6 +2,8 @@ _base_ = [
     '../_base_/datasets/imagenet100.py',
 ]
 
+name = 'in100_augmix'
+
 # data
 train_pipeline = [
     dict(type='RandomResizedCrop', size=224),
@@ -16,7 +18,7 @@ data = dict(
         augmentations=['autocontrast', 'equalize', 'posterize',
                        'rotate', 'solarize', 'shear_x', 'shear_y',
                        'translate_x', 'translate_y'],
-        no_jsd=False,
+        no_jsd=True, # no_jsd=False
     )
 )
 
@@ -34,6 +36,12 @@ lr_config = dict(policy='step', step=[3])
 runner = dict(
     type='base_runner',
     epochs=90,
-    work_dir='/ws/data/dscv/in100_augmix',
+    work_dir='/ws/data2/dscv/in100_augmix',
     evaluate=True,
+    logger=dict(type='wandb_logger',
+                init_kwargs=dict(
+                    project='dscv',
+                    entity='kaist-url-ai28',
+                    name=name),
+                use_wandb=True),
 )

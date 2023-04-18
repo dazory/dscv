@@ -1,7 +1,7 @@
 import os
 import time
 import torch
-from dscv.utils.logger import BaseLogger
+from dscv.loggers.builder import build_logger
 
 
 class BaseRunner:
@@ -18,7 +18,7 @@ class BaseRunner:
         for param_group in self.optimizer.param_groups:
             self.lr = param_group['lr']
         self.work_dir = work_dir
-        self.logger = logger if logger is not None else BaseLogger()
+        self.logger = build_logger(logger)
         self.epochs = epochs
         self.evaluate = evaluate
 
@@ -37,7 +37,8 @@ class BaseRunner:
             self.logger.before_train_iter()
             self.adjust_lr()
 
-            loss = self.model(data_batch, **kwargs)
+            images, labels = data_batch
+            loss = self.model(images, **kwargs)
             outputs = dict(loss=loss)
 
             self.logger.after_train_iter()

@@ -5,6 +5,7 @@ from torchvision import models
 
 from dscv.losses.builder import build_loss
 from dscv.models.builder import MODELS
+from dscv.utils.utils import accuracy
 
 
 @MODELS.register_module
@@ -15,6 +16,7 @@ class AugMixNet(nn.Module):
         self.criterions = build_loss(loss)
 
         self.num_inputs = num_inputs
+        self.device = torch.cuda.current_device()
 
     def forward(self, images, labels, mode='train', **kwargs):
         if mode == 'train':
@@ -31,6 +33,7 @@ class AugMixNet(nn.Module):
         # forward
         if isinstance(images, tuple) or isinstance(images, list):
             images = torch.cat(images, dim=0)
+        images = images.to(self.device)
         logits = self.model(images)
 
         # compute loss
@@ -45,11 +48,14 @@ class AugMixNet(nn.Module):
         outputs = dict()
 
         # forward
+        images = images.to(self.device)
         logits = self.model(images)
 
-        # compute loss
-        losses = self.loss(logits, labels)
-        outputs.update(losses)
+        # compute accuracy
+        topk = (1, 5)
+        acc_list = accuracy(logits, labels, topk=topk)
+        for (k, acc) in zip(topk, acc_list):
+            outputs.update({f'acc{k}': acc.item()})
 
         return outputs
 

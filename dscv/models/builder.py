@@ -1,8 +1,5 @@
 import warnings
 
-import torch.nn
-import torch.backends.cudnn as cudnn
-
 from dscv.utils import Registry, build_from_cfg
 
 
@@ -26,7 +23,5 @@ def build_model(cfg, train_cfg=None, test_cfg=None):
 
     model.train_cfg = train_cfg
     model.test_cfg = test_cfg
-    model = torch.nn.DataParallel(model).cuda()
-    cudnn.benchmark = True
 
     return model

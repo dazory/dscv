@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from dscv.models.builder import MODELS
 from dscv.losses.builder import build_loss
+from dscv.utils.utils import accuracy
 
 
 @MODELS.register_module
@@ -12,6 +13,7 @@ class BaseNet(nn.Module):
         super(BaseNet, self).__init__()
         self.model = model
         self.criterions = build_loss(loss)
+        self.device = torch.cuda.current_device()
 
     def forward(self, images, labels, mode='train', **kwargs):
         if mode == 'train':
@@ -26,6 +28,7 @@ class BaseNet(nn.Module):
         outputs = dict()
 
         # forward
+        images = images.to(self.device)
         logits = self.model(images)
 
         # compute loss
@@ -40,11 +43,18 @@ class BaseNet(nn.Module):
         outputs = dict()
 
         # forward
+        images = images.to(self.device)
         logits = self.model(images)
 
         # compute loss
         losses = self.loss(logits, labels)
         outputs.update(losses)
+
+        # compute accuracy
+        topk = (1, 5)
+        acc_list = accuracy(logits, labels, topk=topk)
+        for (k, acc) in zip(topk, acc_list):
+            outputs.update({f'acc{k}': acc.item()})
 
         return outputs
 

@@ -1,4 +1,5 @@
 _base_ = [
+    '../_base_/schedule.py',
     '../_base_/datasets/imagenet100.py',
 ]
 
@@ -53,6 +54,7 @@ runner = dict(
                 init_kwargs=dict(
                     project='dscv',
                     entity='kaist-url-ai28',
+                    group=name,
                     name=name),
                 use_wandb=True),
 )

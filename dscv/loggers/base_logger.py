@@ -1,6 +1,8 @@
 import functools
 from typing import Callable
 
+from .utils import master_only
+
 
 def logger_used(func: Callable) -> Callable:
     @functools.wraps(func)
@@ -55,21 +57,25 @@ class BaseLogger():
 
     # run
     @logger_used
+    @master_only
     def before_run(self):
         pass
 
     @logger_used
+    @master_only
     def after_run(self):
         pass
 
     # epoch
     @logger_used
+    @master_only
     def before_train_epoch(self):
         if self.train_epoch % self.train_epoch_interval == 0:
             self.log_dict('train')
         self.clear_data()
 
     @logger_used
+    @master_only
     def after_train_epoch(self):
         if self.train_epoch % self.train_epoch_interval == 0:
             self.log_dict('train')
@@ -77,6 +83,7 @@ class BaseLogger():
         self.train_epoch += 1
 
     @logger_used
+    @master_only
     def after_val_epoch(self):
         if self.val_epoch % self.val_epoch_interval == 0:
             self.log_dict('val')
@@ -84,6 +91,7 @@ class BaseLogger():
         self.val_epoch += 1
 
     @logger_used
+    @master_only
     def before_val_epoch(self):
         if self.val_epoch % self.val_epoch_interval == 0:
             self.log_dict('val')
@@ -91,12 +99,14 @@ class BaseLogger():
 
     # iter
     @logger_used
+    @master_only
     def before_train_iter(self):
         if self.train_iter % self.train_iter_interval == 0:
             self.log_dict('train')
         self.clear_data()
 
     @logger_used
+    @master_only
     def after_train_iter(self):
         if self.train_iter % self.train_iter_interval == 0:
             self.log_dict('train')
@@ -104,12 +114,14 @@ class BaseLogger():
         self.train_iter += 1
 
     @logger_used
+    @master_only
     def before_val_iter(self):
         if self.val_iter % self.val_iter_interval == 0:
             self.log_dict('val')
         self.clear_data()
 
     @logger_used
+    @master_only
     def after_val_iter(self):
         if self.val_iter % self.val_iter_interval == 0:
             self.log_dict('val')

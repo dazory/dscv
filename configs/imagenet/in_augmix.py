@@ -1,4 +1,5 @@
 _base_ = [
+    '../_base_/schedule.py',
     '../_base_/datasets/imagenet.py',
 ]
 

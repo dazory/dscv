@@ -17,8 +17,6 @@
 import numpy as np
 from PIL import Image, ImageOps, ImageEnhance
 
-# ImageNet code should change this value
-
 
 def int_parameter(level, maxval):
   """Helper function to scale `val` between 0 and maxval .
@@ -137,18 +135,18 @@ def sharpness(pil_img, level, img_size):
     return ImageEnhance.Sharpness(pil_img).enhance(level)
 
 type_to_op = {
-    'autocontrast': lambda img, lev, img_size: autocontrast(img, lev, img_size),
-    'equalize': lambda img, lev, img_size: equalize(img, lev, img_size),
-    'posterize': lambda img, lev, img_size: posterize(img, lev, img_size),
-    'rotate': lambda img, lev, img_size: rotate(img, lev, img_size),
-    'solarize': lambda img, lev, img_size: solarize(img, lev, img_size),
-    'shear_x': lambda img, lev, img_size: shear_x(img, lev, img_size),
-    'shear_y': lambda img, lev, img_size: shear_y(img, lev, img_size),
-    'translate_x': lambda img, lev, img_size: translate_x(img, lev, img_size),
-    'translate_y': lambda img, lev, img_size: translate_y(img, lev, img_size),
-    'color': lambda img, lev, img_size: color(img, lev, img_size),
-    'contrast': lambda img, lev, img_size: contrast(img, lev, img_size),
-    'brightness': lambda img, lev, img_size: brightness(img, lev, img_size),
-    'sharpness': lambda img, lev, img_size: sharpness(img, lev, img_size),
+    'autocontrast': autocontrast,
+    'equalize': equalize,
+    'posterize': posterize,
+    'rotate': rotate,
+    'solarize': solarize,
+    'shear_x': shear_x,
+    'shear_y': shear_y,
+    'translate_x': translate_x,
+    'translate_y': translate_y,
+    'color': color,
+    'contrast': contrast,
+    'brightness': brightness,
+    'sharpness': sharpness,
 }
 

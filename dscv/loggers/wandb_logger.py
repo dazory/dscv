@@ -1,6 +1,8 @@
 import functools
 from typing import Callable
 
+from .utils import master_only
+
 
 def wandb_used(func: Callable) -> Callable:
     @functools.wraps(func)
@@ -44,14 +46,17 @@ class WandbLogger():
     def clear_data(self):
         self.data = dict()
 
+    @master_only
     def log(self, key, value):
         self.wandb.log({key, value})
 
+    @master_only
     def log_dict(self, prefix='default'):
         for key, value in self.data.items():
-            self.wandb.log({key: value})
+            self.wandb.log({f"{prefix}/{key}": value})
 
     @wandb_used
+    @master_only
     def import_wandb(self):
         try:
             import wandb
@@ -61,6 +66,7 @@ class WandbLogger():
 
     # run
     @wandb_used
+    @master_only
     def before_run(self):
         if self.wandb is None:
             self.import_wandb()
@@ -70,17 +76,20 @@ class WandbLogger():
             self.wandb.init()
 
     @wandb_used
+    @master_only
     def after_run(self):
         self.wandb.finish()
 
     # epoch
     @wandb_used
+    @master_only
     def before_train_epoch(self):
         if self.train_epoch % self.train_epoch_interval == 0:
             self.log_dict('train')
         self.clear_data()
 
     @wandb_used
+    @master_only
     def after_train_epoch(self):
         if self.train_epoch % self.train_epoch_interval == 0:
             self.log_dict('train')
@@ -88,12 +97,14 @@ class WandbLogger():
         self.train_epoch += 1
 
     @wandb_used
+    @master_only
     def before_val_epoch(self):
         if self.val_epoch % self.val_epoch_interval == 0:
             self.log_dict('val')
         self.clear_data()
 
     @wandb_used
+    @master_only
     def after_val_epoch(self):
         if self.val_epoch % self.val_epoch_interval == 0:
             self.log_dict('val')
@@ -102,12 +113,14 @@ class WandbLogger():
 
     # iter
     @wandb_used
+    @master_only
     def before_train_iter(self):
         if self.train_iter % self.train_iter_interval == 0:
             self.log_dict('train')
         self.clear_data()
 
     @wandb_used
+    @master_only
     def after_train_iter(self):
         if self.train_iter % self.train_iter_interval == 0:
             self.log_dict('train')
@@ -115,12 +128,14 @@ class WandbLogger():
         self.train_iter += 1
 
     @wandb_used
+    @master_only
     def before_val_iter(self):
         if self.val_iter % self.val_iter_interval == 0:
             self.log_dict('val')
         self.clear_data()
 
     @wandb_used
+    @master_only
     def after_val_iter(self):
         if self.val_iter % self.val_iter_interval == 0:
             self.log_dict('val')

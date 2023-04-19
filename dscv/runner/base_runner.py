@@ -2,13 +2,14 @@ import os
 import time
 import torch
 from dscv.loggers.builder import build_logger
+from dscv.utils.dist_utils import get_dist_info
 
 
 def parse_losses(outputs, device='cuda'):
     loss = torch.tensor(0.0).to(device)
     for key, value in outputs.items():
         if 'loss' in key:
-            loss += value
+            loss += torch.mean(value)
     return loss
 
 
@@ -16,23 +17,28 @@ class BaseRunner:
     def __init__(self,
                  model,
                  optimizer=None,
-                 work_dir=None,
-                 logger=None,
                  epochs=None,
+                 work_dir=None,
                  evaluate=True,
-                 device='cuda'):
+                 logger=None,
+                 distributed=False,
+                 print_freq=100,
+                 ):
         super(BaseRunner, self).__init__()
-        self.model = model.to(device)
-
+        self.model = model
         self.optimizer = optimizer
         for param_group in self.optimizer.param_groups:
             self.lr = param_group['lr']
+        self.epochs = epochs
+
+        self.distributed = distributed
+        self.device = torch.cuda.current_device()
+        self.rank, _ = get_dist_info()
 
         self.work_dir = work_dir
-        self.logger = build_logger(logger)
-        self.epochs = epochs
         self.evaluate = evaluate
-        self.device = device
+        self.logger = build_logger(logger)
+        self.print_freq = print_freq
 
         self._epoch = 0
         self._iter = 0
@@ -44,7 +50,9 @@ class BaseRunner:
         self.data_loader = data_loader
         self.logger.before_train_epoch()
         time.sleep(2)  # Prevent possible deadlock during epoch transition
+        end = time.time()
         for i, data_batch in enumerate(self.data_loader):
+            data_time = time.time() - end
             self._inner_iter = i
             self.logger.before_train_iter()
             self.adjust_lr()
@@ -57,8 +65,15 @@ class BaseRunner:
             loss = parse_losses(outputs, device=self.device)
 
             # backward
+            self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+
+            batch_time = time.time() - end
+            if self.rank == 0 and i % self.print_freq == 0:
+                print(
+                    'Batch {}/{}: Data Time {:.3f} | Batch Time {:.3f} | Train Loss {:.3f}'.format(
+                        i, len(data_loader), data_time, batch_time, loss.item()))
 
             self.logger.after_train_iter()
             self._iter += 1
@@ -92,6 +107,8 @@ class BaseRunner:
 
         self.logger.before_run()
         for epoch in range(start_epoch, self.epochs):
+            if self.distributed:
+                data_loaders[0].sampler.set_epoch(epoch)
             self.train(data_loaders[0], **kwargs)
             if self.evaluate:
                 self.val(data_loaders[1], **kwargs)
@@ -102,11 +119,11 @@ class BaseRunner:
     def log_vars(self, outputs):
         for key, value in outputs.items():
             if isinstance(value, torch.Tensor):
-                self.logger.add_data(key, value.item())
+                self.logger.add_data(key, torch.mean(value).item())
             elif isinstance(value, list):
                 _value = torch.tensor(0.0)
                 for v in value:
-                    _value += v
+                    _value += torch.mean(v)
                 self.logger.add_data(key, _value.item())
             elif isinstance(value, dict):
                 self.log_vars(value)

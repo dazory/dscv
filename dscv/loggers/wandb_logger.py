@@ -1,5 +1,6 @@
 import functools
 from typing import Callable
+import pandas as pd
 
 from .utils import master_only
 
@@ -40,8 +41,25 @@ class WandbLogger():
 
         self.import_wandb()
 
-    def add_data(self, key, value):
-        self.data[key] = value
+    @wandb_used
+    def add_data(self, key, value, type=None, **kwargs):
+        if type == 'image':
+            self.data[key] = self.wandb.Image(value)
+        elif type == 'table':
+            self.add_table(key, value, **kwargs)
+        else:
+            self.data[key] = value
+
+    @wandb_used
+    def add_table(self, key, value, columns, x_label='x', y_label='y', plot_type=None):
+        assert isinstance(value, list) and isinstance(columns, list)
+        assert len(value[0]) == len(columns)
+        # table = self.wandb.Table(data=value, columns=columns)
+        table = pd.DataFrame(value, columns=columns)
+        if plot_type == 'line':
+            self.data[key] = self.wandb.plot.line(table, x_label, y_label, title=key)
+        else:
+            self.data[key] = table
 
     def clear_data(self):
         self.data = dict()

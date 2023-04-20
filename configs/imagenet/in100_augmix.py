@@ -12,7 +12,14 @@ train_pipeline = [
     dict(type='RandomHorizontalFlip'),
 ]
 img_norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+test_pipeline = [
+    dict(type='Resize', size=256),
+    dict(type='CenterCrop', size=224),
+    dict(type='ToTensor'),
+    dict(type='Normalize', **img_norm_cfg),
+]
 data = dict(
+    # batch_size=128,
     train=dict(
         wrapper='AugMixDataset',
         pipeline=train_pipeline,
@@ -21,6 +28,17 @@ data = dict(
                        'rotate', 'solarize', 'shear_x', 'shear_y',
                        'translate_x', 'translate_y'],
         no_jsd=False,
+    ),
+    val_c=dict(
+        type='ImageNetCDataset',
+        data_root=f"/ws/data/imagenet100-c",
+        pipeline=test_pipeline,
+        corruptions=['gaussian_noise', 'shot_noise', 'impulse_noise',
+                     'defocus_blur', 'glass_blur', 'motion_blur',
+                     'zoom_blur', 'snow', 'frost', 'fog',
+                     'brightness', 'contrast', 'elastic_transform',
+                     'pixelate', 'jpeg_compression'],
+        severities=[1, 2, 3, 4, 5]
     )
 )
 
@@ -46,10 +64,10 @@ optimizer_config = dict(grad_clip=None)
 lr_config = dict(policy='step', step=[3])
 
 runner = dict(
-    type='base_runner',
+    type='RunnerC',
     epochs=90,
     work_dir=f'/ws/data2/dscv/{name}',
-    evaluate=True,
+    modes=['train', 'val', 'val_c'],
     logger=dict(type='wandb_logger',
                 init_kwargs=dict(
                     project='dscv',

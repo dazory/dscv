@@ -2,7 +2,10 @@ import torch
 import numpy as np
 
 from .augmentations import type_to_op
+from .builder import WRAPPERS
 
+
+@WRAPPERS.register_module
 class AugMixDataset(torch.utils.data.Dataset):
     """Dataset wrapper to perform AugMix augmentation."""
     def __init__(self,

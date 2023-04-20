@@ -1,32 +1,25 @@
-import os
 import torch
 
-import dscv.datasets
 from .pipelines.builder import build_pipeline
+from dscv.utils import Registry, build_from_cfg
 
 
-def build_from_cfg(cfg, obj_cls, default_args=None):
-    args = cfg.copy()
-    if default_args is not None:
-        for name, value in default_args.items():
-            args.setdefault(name, value)
-    obj_type = args.pop('type')
-
-    return obj_cls(**args)
+DATASETS = Registry('datasets')
+WRAPPERS = Registry('wrappers')
 
 
 def build_dataset(cfg):
-    _cfg = cfg.copy(del_type=True)
+    _cfg = cfg.copy()
     _cfg.pipeline = build_pipeline(_cfg.pipeline)
-    if cfg.type == 'ImageNetDataset':
-        dataset = dscv.datasets.ImageNetDataset(**_cfg)
+    if isinstance(cfg, dict):
+        dataset = build_from_cfg(_cfg, DATASETS)
+        if hasattr(_cfg, 'wrapper'):
+            wrapper_cfg = _cfg.copy()
+            wrapper_cfg.type = _cfg.wrapper
+            wrapper_cfg.preprocess = build_pipeline(_cfg.get('preprocess'))
+            dataset = build_from_cfg(wrapper_cfg, WRAPPERS, dataset=dataset)
     else:
-        raise TypeError('')
-
-    if cfg.get('wrapper'):
-        if cfg.wrapper == 'AugMixDataset':
-            _cfg.preprocess = build_pipeline(_cfg.get('preprocess'))
-            dataset = dscv.datasets.AugMixDataset(dataset, **_cfg)
+        raise TypeError('cfg must be a dict, but got {}'.format(type(_cfg)))
 
     return dataset
 

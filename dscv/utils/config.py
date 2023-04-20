@@ -15,17 +15,13 @@ class Config(dict):
         super(Config, self).update(kvdict)
 
     def __getattr__(self, item):
-        if self.get(item):
+        if item in self.keys():
             return self[item]
         else:
             return self.__getattribute__(item)
 
     def __setattr__(self, key, value):
-        if self.get(key):
-            self[key] = value
-        else:
-            raise AttributeError(
-                "type object '{}' has no attribute '{}'".format(type(self).__name__, key))
+        self[key] = value
 
     def copy(self, del_type=False):
         data = Config()

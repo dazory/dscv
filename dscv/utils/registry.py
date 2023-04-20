@@ -9,7 +9,7 @@ class Registry(object):
         return module_class
 
 
-def build_from_cfg(cfg, registry):
+def build_from_cfg(cfg, registry, **kwargs):
     if isinstance(cfg, list):
         modules = []
         for c in cfg:
@@ -21,6 +21,6 @@ def build_from_cfg(cfg, registry):
         if obj_type not in registry._module_dict:
             raise KeyError('Unrecognized {} type "{}"'.format(
                 registry._name, obj_type))
-        return registry._module_dict[obj_type](**_cfg)
+        return registry._module_dict[obj_type](**_cfg, **kwargs)
     else:
         raise TypeError('cfg must be a dict or list, but got {}'.format(type(cfg)))

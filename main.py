@@ -106,22 +106,20 @@ def main_worker(rank, num_gpus, cfg, distributed=False):
         batch_size = cfg.data.batch_size
         num_workers = cfg.data.num_workers
 
-    train_dataset = build_dataset(cfg.data.train)
-    val_dataset = build_dataset(cfg.data.val)
-
-    if distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(
-            train_dataset, num_replicas=num_gpus, rank=rank, shuffle=True)
-        val_sampler = torch.utils.data.distributed.DistributedSampler(
-            val_dataset, num_replicas=num_gpus, rank=rank, shuffle=False)
-    else:
-        train_sampler, val_sampler = None, None
-
-    init_fn = partial(worker_init_fn, num_workers=num_workers, rank=rank, seed=cfg.seed)
-    loader_cfg = dict(batch_size=batch_size, num_workers=num_workers, worker_init_fn=init_fn, pin_memory=False)
-    train_loader = build_dataloader(train_dataset, **loader_cfg, sampler=train_sampler, drop_last=True)
-    val_loader = build_dataloader(val_dataset, **loader_cfg, sampler=val_sampler)
-    data_loaders = [train_loader, val_loader]
+    data_loaders = dict()
+    for key, value in cfg.data.items():
+        if isinstance(value, dict):
+            dataset = build_dataset(cfg.data[key])
+            if distributed:
+                shuffle = True if key == 'train' else False
+                sampler = torch.utils.data.distributed.DistributedSampler(
+                    dataset, num_replicas=num_gpus, rank=rank, shuffle=shuffle)
+            else:
+                sampler = None
+            init_fn = partial(worker_init_fn, num_workers=num_workers, rank=rank, seed=cfg.seed)
+            loader_cfg = dict(batch_size=batch_size, num_workers=num_workers, worker_init_fn=init_fn, pin_memory=False)
+            dataloader = build_dataloader(dataset, **loader_cfg, sampler=sampler, drop_last=True)
+            data_loaders[key] = dataloader
 
     # GUIDE: Build model
     model = build_model(cfg.model,

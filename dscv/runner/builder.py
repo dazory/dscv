@@ -1,12 +1,9 @@
-import copy
-from .base_runner import BaseRunner
+from dscv.utils import Registry, build_from_cfg
+
+
+RUNNERS = Registry('runners')
 
 
 def build_runner(cfg, model, optimizer, distributed=False):
-    if cfg.type == 'base_runner':
-        _cfg = cfg.copy(del_type=True)
-        runner = BaseRunner(model, optimizer, **_cfg,
-                            distributed=distributed)
-    else:
-        raise TypeError('')
+    runner = build_from_cfg(cfg, RUNNERS, model=model, optimizer=optimizer, distributed=distributed)
     return runner

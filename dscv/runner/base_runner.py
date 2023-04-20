@@ -1,6 +1,9 @@
 import os
 import time
 import torch
+
+from .builder import RUNNERS
+
 from dscv.loggers.builder import build_logger
 from dscv.utils.dist_utils import get_dist_info
 
@@ -13,13 +16,14 @@ def parse_losses(outputs, device='cuda'):
     return loss
 
 
+@RUNNERS.register_module
 class BaseRunner:
     def __init__(self,
                  model,
-                 optimizer=None,
+                 optimizer,
                  epochs=None,
                  work_dir=None,
-                 evaluate=True,
+                 modes=None,
                  logger=None,
                  distributed=False,
                  print_freq=100,
@@ -36,7 +40,8 @@ class BaseRunner:
         self.rank, _ = get_dist_info()
 
         self.work_dir = work_dir
-        self.evaluate = evaluate
+        self.modes = ['train'] if modes is None else modes
+        assert isinstance(self.modes, list)
         self.logger = build_logger(logger)
         self.print_freq = print_freq
 
@@ -72,8 +77,8 @@ class BaseRunner:
             batch_time = time.time() - end
             if self.rank == 0 and i % self.print_freq == 0:
                 print(
-                    'Batch {}/{}: Data Time {:.3f} | Batch Time {:.3f} | Train Loss {:.3f}'.format(
-                        i, len(data_loader), data_time, batch_time, loss.item()))
+                    'Epoch [{}][{}/{}]: Data Time {:.3f} | Batch Time {:.3f} | Train Loss {:.3f}'.format(
+                        self._epoch, i, len(data_loader), data_time, batch_time, loss.item()))
 
             self.logger.after_train_iter()
             self._iter += 1
@@ -86,14 +91,16 @@ class BaseRunner:
         self.data_loader = data_loader
         self.logger.before_val_epoch()
         time.sleep(2)  # Prevent possible deadlock during epoch transition
+        outputs = dict()
         for i, data_batch in enumerate(self.data_loader):
             self._inner_iter = i
             self.logger.before_val_iter()
 
-            outputs = self.model(*data_batch, mode='val', **kwargs)
-            self.log_vars(outputs)
+            _outputs = self.model(*data_batch, mode='val', **kwargs)
+            self._update_outputs(outputs, _outputs)
             self.logger.after_val_iter()
 
+        self.log_vars(outputs)
         self.logger.after_val_epoch()
 
     def run(self, data_loaders, start_epoch=0, **kwargs):
@@ -103,32 +110,43 @@ class BaseRunner:
             data_loaders (list[:obj:`DataLoader`]): Dataloaders for training
                 and validation.
         """
-        assert isinstance(data_loaders, list)
+        assert isinstance(data_loaders, dict)
 
         self.logger.before_run()
         for epoch in range(start_epoch, self.epochs):
-            if self.distributed:
-                data_loaders[0].sampler.set_epoch(epoch)
-            self.train(data_loaders[0], **kwargs)
-            if self.evaluate:
-                self.val(data_loaders[1], **kwargs)
+            if 'train' in self.modes:
+                if self.distributed:
+                    data_loaders['train'].sampler.set_epoch(epoch)
+                self.train(data_loaders['train'], **kwargs)
+            if 'val' in self.modes:
+                self.val(data_loaders['val'], **kwargs)
 
         time.sleep(1)  # wait for some hooks like loggers to finish
         self.logger.after_run()
 
-    def log_vars(self, outputs):
+    def log_vars(self, outputs, prefix_key=None):
+        def _mean(value):
+            if torch.is_tensor(value):
+                return torch.mean(value)
+            elif isinstance(value, list):
+                return torch.tensor(value).mean()
+            else:
+                return value
+
         for key, value in outputs.items():
             if isinstance(value, torch.Tensor):
-                self.logger.add_data(key, torch.mean(value).item())
+                name = key if prefix_key is None else f"{prefix_key}_{key}"
+                self.logger.add_data(name, torch.mean(value).item())
             elif isinstance(value, list):
-                _value = torch.tensor(0.0)
-                for v in value:
-                    _value += torch.mean(v)
-                self.logger.add_data(key, _value.item())
+                _value = _mean(value)
+                name = key if prefix_key is None else f"{prefix_key}_{key}"
+                self.logger.add_data(name, _value.item())
             elif isinstance(value, dict):
-                self.log_vars(value)
+                name = key if prefix_key is None else f"{prefix_key}_{key}"
+                self.log_vars(value, prefix_key=name)
             else:
-                self.logger.add_data(key, value)
+                name = key if prefix_key is None else f"{prefix_key}_{key}"
+                self.logger.add_data(name, value)
 
     def save_checkpoint(self, score):
         if self._best_score <= score:
@@ -140,6 +158,13 @@ class BaseRunner:
             ckpt_name = f"best.pth"
             ckpt_path = os.path.join(self.work_dir, ckpt_name)
             torch.save(checkpoint, ckpt_path)
+
+    @staticmethod
+    def _update_outputs(outputs, _outputs):
+        for key, value in _outputs.items():
+            if key not in outputs:
+                outputs[key] = []
+            outputs[key].append(value)
 
     def adjust_lr(self):
         b = self.data_loader.batch_size / 256.
